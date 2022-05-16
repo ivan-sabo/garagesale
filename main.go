@@ -2,23 +2,33 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"log"
-	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 )
 
 func main() {
 	log.Printf("Main : started")
 	defer log.Println("Main : completed")
 
+	// Setup dependencies
+	db, err := openDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
 	api := http.Server{
 		Addr:         "localhost:8000",
-		Handler:      http.HandlerFunc(Echo),
+		Handler:      http.HandlerFunc(ListProducts),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
@@ -57,15 +67,47 @@ func main() {
 
 }
 
-// Echo tells you about request you made
-func Echo(w http.ResponseWriter, r *http.Request) {
-	id := rand.Intn(1000)
+func openDB() (*sqlx.DB, error) {
+	q := url.Values{}
+	q.Set("sslmofe", "disabled")
+	q.Set("timezone", "utc")
 
-	fmt.Println("starting", id)
+	u := url.URL{
+		Scheme:   "postgres",
+		User:     url.UserPassword("postgres", "postgres"),
+		Host:     "localhost",
+		Path:     "postgres",
+		RawQuery: q.Encode(),
+	}
 
-	time.Sleep(3 * time.Second)
+	return sqlx.Open("postgres", u.String())
+}
 
-	fmt.Fprintln(w, "You asked to ", r.Method, r.URL.Path)
+// Product is something we sell
+type Product struct {
+	Name     string `json:"name"`
+	Cost     int    `json:"cost"`
+	Quantity int    `json:"quantity"`
+}
 
-	fmt.Println("Ending", id)
+// ListProducts tells you about request you made
+func ListProducts(w http.ResponseWriter, r *http.Request) {
+	list := []Product{
+		{Name: "Comic books", Cost: 75, Quantity: 50},
+		{Name: "McDonalds toys", Cost: 25, Quantity: 125},
+	}
+
+	data, err := json.Marshal(list)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Error marshalling : ", err)
+		return
+	}
+
+	w.Header().Set("content-type", "application/json; charset= utf-8")
+	w.WriteHeader(http.StatusOK)
+
+	if _, err := w.Write(data); err != nil {
+		log.Println("Error writing : ", err)
+	}
 }
