@@ -21,11 +21,10 @@ func main() {
 }
 
 func run() error {
-	log.Printf("Main : started")
-	defer log.Println("Main : completed")
+	// Shadowing - overriding log package with local variable
+	log := log.New(os.Stdout, "sales :", log.LstdFlags)
 
 	// Setup dependencies
-
 	db, err := database.Open(database.Config{
 		Host:       "localhost",
 		User:       "postgres",
@@ -34,11 +33,14 @@ func run() error {
 		Name:       "postgres",
 	})
 	if err != nil {
-		return fmt.Errorf("Run database error : %w", err)
+		return fmt.Errorf("run database error : %w", err)
 	}
 	defer db.Close()
 
-	ps := handlers.Product{DB: db}
+	log.Printf("Main : started")
+	defer log.Println("Main : completed")
+
+	ps := handlers.Product{DB: db, Log: log}
 
 	api := http.Server{
 		Addr:         "localhost:8000",
@@ -60,7 +62,7 @@ func run() error {
 
 	select {
 	case err := <-serverErrors:
-		fmt.Errorf("error : listening and serving : %w", err)
+		return fmt.Errorf("error : listening and serving : %w", err)
 	case <-shutdown:
 		log.Println("main : Start shutdown")
 
@@ -74,7 +76,7 @@ func run() error {
 
 			err := api.Close()
 			if err != nil {
-				fmt.Errorf("main : could not stop server gracefully: %w", err)
+				return fmt.Errorf("main : could not stop server gracefully: %w", err)
 			}
 		}
 	}
