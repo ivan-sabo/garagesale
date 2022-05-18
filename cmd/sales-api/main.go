@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,13 +15,26 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func run() error {
 	log.Printf("Main : started")
 	defer log.Println("Main : completed")
 
 	// Setup dependencies
-	db, err := database.Open()
+
+	db, err := database.Open(database.Config{
+		Host:       "localhost",
+		User:       "postgres",
+		Password:   "postgres",
+		DisableTLS: true,
+		Name:       "postgres",
+	})
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("Run database error : %w", err)
 	}
 	defer db.Close()
 
@@ -46,7 +60,7 @@ func main() {
 
 	select {
 	case err := <-serverErrors:
-		log.Fatalf("error : listening and serving: %s", err)
+		fmt.Errorf("error : listening and serving : %w", err)
 	case <-shutdown:
 		log.Println("main : Start shutdown")
 
@@ -60,9 +74,10 @@ func main() {
 
 			err := api.Close()
 			if err != nil {
-				log.Fatalf("main : could not stop server gracefully: %v", err)
+				fmt.Errorf("main : could not stop server gracefully: %w", err)
 			}
 		}
 	}
 
+	return nil
 }

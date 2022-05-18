@@ -14,7 +14,13 @@ import (
 
 func main() {
 	// Setup dependencies
-	db, err := database.Open()
+	db, err := database.Open(database.Config{
+		Host:       "localhost",
+		User:       "postgres",
+		Password:   "postgres",
+		DisableTLS: true,
+		Name:       "postgres",
+	})
 	if err != nil {
 		log.Fatal(err)
 	}
