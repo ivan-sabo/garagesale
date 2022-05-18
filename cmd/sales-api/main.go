@@ -40,11 +40,9 @@ func run() error {
 	log.Printf("Main : started")
 	defer log.Println("Main : completed")
 
-	ps := handlers.Product{DB: db, Log: log}
-
 	api := http.Server{
 		Addr:         "localhost:8000",
-		Handler:      http.HandlerFunc(ps.List),
+		Handler:      handlers.API(log, db),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 	}
