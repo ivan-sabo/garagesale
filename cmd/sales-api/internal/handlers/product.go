@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -18,56 +19,46 @@ type Product struct {
 }
 
 // ListProducts tells you about request you made
-func (p *Product) List(w http.ResponseWriter, r *http.Request) {
+func (p *Product) List(w http.ResponseWriter, r *http.Request) error {
 	list, err := product.List(p.DB)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		p.Log.Println("Error querying DB : ", err)
-		return
+		return err
 	}
 
-	if err := web.Respond(w, list, http.StatusOK); err != nil {
-		p.Log.Println("error responding : ", err)
-		return
-	}
+	return web.Respond(w, list, http.StatusOK)
 }
 
 // Retrieve gives a signle Product
-func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) {
+func (p *Product) Retrieve(w http.ResponseWriter, r *http.Request) error {
 	id := chi.URLParam(r, "id")
 
 	prod, err := product.Retrieve(p.DB, id)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		p.Log.Println("Error querying DB : ", err)
-		return
+		switch err {
+		case product.ErrNotFound:
+			return web.NewRequestError(err, http.StatusNotFound)
+		case product.ErrInvalidID:
+			return web.NewRequestError(err, http.StatusBadRequest)
+		default:
+			return fmt.Errorf("looking for product %q; %w", id, err)
+		}
 	}
 
-	if err := web.Respond(w, prod, http.StatusOK); err != nil {
-		p.Log.Println("error responding : ", err)
-		return
-	}
+	return web.Respond(w, prod, http.StatusOK)
 }
 
 // Create decode a JSON document from a POST request and create a new Product
-func (p *Product) Create(w http.ResponseWriter, r *http.Request) {
+func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
 	var np product.NewProduct
 
 	if err := web.Decode(r, &np); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		p.Log.Println(err)
-		return
+		return err
 	}
 
 	prod, err := product.Create(p.DB, np, time.Now())
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		p.Log.Println("error querying DB : ", err)
-		return
+		return err
 	}
 
-	if err := web.Respond(w, prod, http.StatusCreated); err != nil {
-		p.Log.Println("error responding : ", err)
-		return
-	}
+	return web.Respond(w, prod, http.StatusCreated)
 }

@@ -1,6 +1,8 @@
 package product
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -8,11 +10,17 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// Predefined errors for known failure scenarios
+var (
+	ErrNotFound  = errors.New("product not found")
+	ErrInvalidID = errors.New("id provided was not a valid UUID")
+)
+
 // List returns all known products
 func List(db *sqlx.DB) ([]Product, error) {
 	list := []Product{}
 
-	const q = `SELECT * FROM products`
+	const q = `SELECT product_id, name, cost, quantity, date_updated, date_created FROM products`
 
 	if err := db.Select(&list, q); err != nil {
 		return nil, err
@@ -23,13 +31,22 @@ func List(db *sqlx.DB) ([]Product, error) {
 
 // Retrieve gives a single product
 func Retrieve(db *sqlx.DB, id string) (*Product, error) {
+
+	if _, err := uuid.Parse(id); err != nil {
+		return nil, ErrInvalidID
+	}
+
 	var p Product
 
-	const q = `SELECT *
+	const q = `SELECT
+	product_id, name, cost, quantity, date_updated, date_created
 	FROM products
 	WHERE product_id = $1`
 
 	if err := db.Get(&p, q, id); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
 		return nil, err
 	}
 
