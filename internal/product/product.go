@@ -120,3 +120,18 @@ func Update(ctx context.Context, db *sqlx.DB, id string, update UpdateProduct, n
 
 	return nil
 }
+
+// Delete removes the product identified by a given ID.
+func Delete(ctx context.Context, db *sqlx.DB, id string) error {
+	if _, err := uuid.Parse(id); err != nil {
+		return ErrInvalidID
+	}
+
+	const q = `DELETE FROM products WHERE product_id = $1`
+
+	if _, err := db.ExecContext(ctx, q, id); err != nil {
+		return fmt.Errorf("deleting product (id: %s): %w", id, err)
+	}
+
+	return nil
+}

@@ -88,6 +88,22 @@ func (p *Product) Update(w http.ResponseWriter, r *http.Request) error {
 	return web.Respond(w, nil, http.StatusNoContent)
 }
 
+// Delete removes a single product identified by an ID in the request URL.
+func (p *Product) Delete(w http.ResponseWriter, r *http.Request) error {
+	id := chi.URLParam(r, "id")
+
+	if err := product.Delete(r.Context(), p.DB, id); err != nil {
+		switch err {
+		case product.ErrInvalidID:
+			return web.NewRequestError(err, http.StatusBadRequest)
+		default:
+			return fmt.Errorf("deleting product (id: %s): %w", id, err)
+		}
+	}
+
+	return web.Respond(w, nil, http.StatusNoContent)
+}
+
 // AddSale creates a new Sale for a particular product. It looks for a JSON
 // object in the request body
 func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
