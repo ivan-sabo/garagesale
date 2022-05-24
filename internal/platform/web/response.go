@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"github.com/pkg/errors"
 )
 
 // Respond marshals a value to JSON and sends it to the client
@@ -25,17 +27,28 @@ func Respond(w http.ResponseWriter, value interface{}, statusCode int) error {
 
 // ResponError knows how to handle errors going out to the client
 func ResponError(w http.ResponseWriter, err error) error {
-	if webErr, ok := err.(*Error); ok {
-		resp := ErrorResponse{
-			Error: webErr.Err.Error(),
+
+	// If the error was of the type *Error, the handler has
+	// a specific status code and error to return.
+	if webErr, ok := errors.Cause(err).(*Error); ok {
+		er := ErrorResponse{
+			Error:  webErr.Err.Error(),
+			Fields: webErr.Fields,
+		}
+		if err := Respond(w, er, webErr.Status); err != nil {
+			return err
 		}
 
-		return Respond(w, resp, webErr.Status)
+		return nil
 	}
 
-	resp := ErrorResponse{
+	// If not, the handler sent any arbitrary error value so use 500
+	er := ErrorResponse{
 		Error: http.StatusText(http.StatusInternalServerError),
 	}
+	if err := Respond(w, er, http.StatusInternalServerError); err != nil {
+		return err
+	}
 
-	return Respond(w, resp, http.StatusInternalServerError)
+	return nil
 }
