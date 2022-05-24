@@ -64,6 +64,30 @@ func (p *Product) Create(w http.ResponseWriter, r *http.Request) error {
 	return web.Respond(w, prod, http.StatusCreated)
 }
 
+// Update decodes the body of a request to update an existing product. The ID
+// of the product is part of the request URL
+func (p *Product) Update(w http.ResponseWriter, r *http.Request) error {
+	id := chi.URLParam(r, "id")
+
+	var update product.UpdateProduct
+	if err := web.Decode(r, &update); err != nil {
+		return fmt.Errorf("decoding product update: %w", err)
+	}
+
+	if err := product.Update(r.Context(), p.DB, id, update, time.Now()); err != nil {
+		switch err {
+		case product.ErrNotFound:
+			return web.NewRequestError(err, http.StatusNotFound)
+		case product.ErrInvalidID:
+			return web.NewRequestError(err, http.StatusBadRequest)
+		default:
+			return fmt.Errorf("updating product (id: %q): %w", id, err)
+		}
+	}
+
+	return web.Respond(w, nil, http.StatusNoContent)
+}
+
 // AddSale creates a new Sale for a particular product. It looks for a JSON
 // object in the request body
 func (p *Product) AddSale(w http.ResponseWriter, r *http.Request) error {
