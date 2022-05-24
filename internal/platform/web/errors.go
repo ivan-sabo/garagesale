@@ -2,7 +2,7 @@ package web
 
 // FieldError is used to indicate an error with a specific request field.
 type FieldError struct {
-	Field string `json:"field`
+	Field string `json:"field"`
 	Error string `json:"error"`
 }
 
