@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"net/url"
 
 	"github.com/jmoiron/sqlx"
@@ -35,4 +36,16 @@ func Open(cfg Config) (*sqlx.DB, error) {
 	}
 
 	return sqlx.Open("postgres", u.String())
+}
+
+// StatusCheck returns nil if it can successfully talk to the database.
+// It returns a non-nil error otherwise
+func StatusCheck(ctx context.Context, db *sqlx.DB) error {
+
+	// return db.Ping()
+	// will cache a connections. If DB goes away after it was previosly able to make a connection, this wouldn't be correct anymore.
+	// SQL-specific thing. The only way to make sure is to run a real query
+	const q = `SELECT true`
+	var tmp bool
+	return db.QueryRowContext(ctx, q).Scan(&tmp)
 }

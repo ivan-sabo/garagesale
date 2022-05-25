@@ -11,6 +11,9 @@ import (
 func API(l *log.Logger, db *sqlx.DB) http.Handler {
 	app := web.NewApp(l)
 
+	c := Check{db: db}
+	app.Handle(http.MethodGet, "/v1/health", c.Health)
+
 	p := Product{DB: db, Log: l}
 
 	app.Handle(http.MethodGet, "/v1/products", p.List)
