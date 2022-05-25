@@ -4,12 +4,13 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/ivan-sabo/garagesale/internal/middleware"
 	"github.com/ivan-sabo/garagesale/internal/platform/web"
 	"github.com/jmoiron/sqlx"
 )
 
 func API(l *log.Logger, db *sqlx.DB) http.Handler {
-	app := web.NewApp(l)
+	app := web.NewApp(l, middleware.Errors(l))
 
 	c := Check{db: db}
 	app.Handle(http.MethodGet, "/v1/health", c.Health)
